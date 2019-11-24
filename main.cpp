@@ -1,12 +1,13 @@
+#include <array>
 #include <iostream>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
-#include <array>
 
-static std::array<float, 10> s_bufferGrava;
-static std::array<float, 10> s_bufferSerial;
+// são vectors e não arrays por causa da função clear
+static std::vector<float> s_bufferGrava;
+static std::vector<float> s_bufferSerial;
 static std::queue<float> s_queueTemp;
 
 float mediaAritmetica(const std::vector<float> &valores) {
@@ -58,4 +59,14 @@ void temperatura() {
   // daí dar queue em s_queueTemp pra mandar pra Serial e Grava
 }
 
-void grava(std::queue<float> mediaAritmetica) {}
+void grava(const std::queue<float> &mediaAritmetica) {
+  if (s_bufferGrava.size() == s_bufferGrava.maxSize()) {
+    for (valor : s_bufferGrava) {
+      // envia aqui os dados pra memória Grava do microcontrolador
+    }
+    // esvazia o conteúdo
+    s_bufferGrava.clear();
+  }
+}
+
+void serial(const std::queue<float> &mediaAritmetica) {}
