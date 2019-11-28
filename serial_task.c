@@ -16,6 +16,7 @@
 #include "driverlib/rom.h"
 #include "drivers/buttons.h"
 #include "utils/uartstdio.h"
+#include "drivers/rgb.h"
 #include "switch_task.h"
 #include "led_task.h"
 #include "priorities.h"
@@ -29,12 +30,16 @@
 
 #define SERIALTASKSTACKSIZE        128
 
-#define SERIAL_ITEM_SIZE           sizeof(uint8_t)
-#define SERIAL_QUEUE_SIZE          5
+#define SERIAL_ITEM_SIZE           sizeof(uint32_t)
+#define SERIAL_QUEUE_SIZE          10
 
 extern xSemaphoreHandle g_pUARTSemaphore;
 
 xQueueHandle queue2;
+
+static uint32_t g_pui32Colors[3];
+
+TaskHandle_t SerialTask_handler;
 
 static void SerialTask(void *pvParameters)
 {
@@ -55,13 +60,16 @@ static void SerialTask(void *pvParameters)
 
             if(index_serial_Buffer==10)
             {
+                g_pui32Colors[BLUE] = 0x8000;
+                RGBColorSet(g_pui32Colors);
+
                 xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
                 UARTprintf("Task SERIAL acordou:\n" );
                 UARTprintf("Task SERIAL enviou os seguintes valores: \n");
                 int i = 0;
-                while(i<=index_serial_Buffer)
+                while(i<index_serial_Buffer)
                 {
-                    UARTprintf("%d ,\n",  ui32TempValue[i]);
+                    UARTprintf("valor[%d] = %d ,\n", i+1,  ui32TempValue[i]);
                     i++;
                 }
                 xSemaphoreGive(g_pUARTSemaphore);
@@ -78,9 +86,9 @@ uint32_t SerialTaskInit(void)
 {
     queue2 = xQueueCreate(SERIAL_QUEUE_SIZE, SERIAL_ITEM_SIZE);
 
-    ROM_FPULazyStackingEnable();
     //TempTask(xTaskGetTickCount);
-    if(xTaskCreate(SerialTask, (const portCHAR *)"Serial", SERIALTASKSTACKSIZE, NULL, tskIDLE_PRIORITY + PRIORITY_LED_TASK, NULL) != pdTRUE)
+
+    if(xTaskCreate(SerialTask, (const portCHAR *)"Serial", SERIALTASKSTACKSIZE, NULL, tskIDLE_PRIORITY + PRIORITY_SERIAL_TASK, &SerialTask_handler) != pdTRUE)
     {
         return(1);
     }

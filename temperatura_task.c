@@ -36,9 +36,13 @@ __error__(char *pcFilename, uint32_t ui32Line)
 
 #define TEMPTASKSTACKSIZE        128
 
-//extern xQueueHandle queue1; //Grava Task
+extern xQueueHandle queue1; //Grava Task
 extern xQueueHandle queue2; // Serial Task
 extern xSemaphoreHandle g_pUARTSemaphore;
+
+static uint32_t g_pui32Colors[3];
+
+TaskHandle_t TemperaturaTask_handler;
 
 static void TemperaturaTask(void *pvParameters)
 {
@@ -68,6 +72,9 @@ static void TemperaturaTask(void *pvParameters)
         UARTprintf("task TEMPERATURA ACORDOU \n");
         xSemaphoreGive(g_pUARTSemaphore);
 
+        g_pui32Colors[RED] = 0x8000;
+        RGBColorSet(g_pui32Colors);
+
         ROM_ADCIntClear(ADC0_BASE, 1);
         ROM_ADCProcessorTrigger(ADC0_BASE, 1);
 
@@ -81,13 +88,13 @@ static void TemperaturaTask(void *pvParameters)
         xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
         UARTprintf(" %3d*C\n" ,ui32TempValueC);
         xSemaphoreGive(g_pUARTSemaphore);
-        /*if(xQueueSend(queue1, &ui32TempValueC, portMAX_DELAY) != pdPASS)
+        if(xQueueSend(queue1, &ui32TempValueC, portMAX_DELAY) != pdPASS)
         {
             UARTprintf("\nQueue full. This should never happen.\n");
             while(1)
             {
             }
-        }*/
+        }
         if(xQueueSend(queue2, &ui32TempValueC, portMAX_DELAY) != pdPASS)
         {
             UARTprintf("\nQueue full. This should never happen.\n");
@@ -101,8 +108,7 @@ static void TemperaturaTask(void *pvParameters)
 
 uint32_t TemperaturaTaskInit(void)
 {
-    ROM_FPULazyStackingEnable();
-    if(xTaskCreate(TemperaturaTask, (const portCHAR *)"Temperatura",TEMPTASKSTACKSIZE, NULL, tskIDLE_PRIORITY + PRIORITY_LED_TASK, NULL) != pdTRUE)
+    if(xTaskCreate(TemperaturaTask, (const portCHAR *)"Temperatura",TEMPTASKSTACKSIZE, NULL, tskIDLE_PRIORITY + PRIORITY_TEMPERATURA_TASK, &TemperaturaTask_handler) != pdTRUE)
     {
         return(1);
     }

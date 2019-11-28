@@ -32,13 +32,12 @@
 #include "driverlib/rom.h"
 #include "drivers/buttons.h"
 #include "utils/uartstdio.h"
+#include "drivers/rgb.h"
 #include "switch_task.h"
 #include "led_task.h"
 #include "priorities.h"
 #include "FreeRTOS.h"
-// necessário para vTaskSuspendAll e xTaskResumeAll
 #include "task.h"
-//
 #include "queue.h"
 #include "semphr.h"
 
@@ -49,21 +48,27 @@
 //*****************************************************************************
 #define SWITCHTASKSTACKSIZE        128         // Stack size in words
 
-extern xQueueHandle g_pLEDQueue;
+//extern xQueueHandle g_pLEDQueue;
 extern xSemaphoreHandle g_pUARTSemaphore;
+
+extern TaskHandle_t SerialTask_handler;
+extern TaskHandle_t TemperaturaTask_handler;
+extern TaskHandle_t GravaTask_handler;
 
 //*****************************************************************************
 //
 // This task reads the buttons' state and passes this information to LEDTask.
 //
 //*****************************************************************************
+
+static uint32_t g_pui32Colors[3];
+
 static void
 SwitchTask(void *pvParameters)
 {
     portTickType ui16LastTime;
     uint32_t ui32SwitchDelay = 25;
     uint8_t ui8CurButtonState, ui8PrevButtonState;
-    uint8_t ui8Message;
 
     ui8CurButtonState = ui8PrevButtonState = 0;
 
@@ -98,55 +103,35 @@ SwitchTask(void *pvParameters)
                 // LEFT_BUTTON é o SW1
                 if((ui8CurButtonState & ALL_BUTTONS) == LEFT_BUTTON)
                 {
-                    ui8Message = LEFT_BUTTON;
 
-                    //
-                    // Guard UART from concurrent access.
-                    //
-                    //xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
-                    //UARTprintf("Left Button is pressed.\n");
-                    //xSemaphoreGive(g_pUARTSemaphore);
+                    xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
+                    UARTprintf("SW1 foi pressionado.\n");
+                    xSemaphoreGive(g_pUARTSemaphore);
 
-                    // Suspende o scheduler sem desabilitar interrupções. Evita troca de contexto.
-                    vTaskSuspendAll();
+                    vTaskSuspend(SerialTask_handler);
+                    vTaskSuspend(GravaTask_handler);
+                    vTaskSuspend(TemperaturaTask_handler);
+
+                    g_pui32Colors[RED] = 0x0000;
+                    g_pui32Colors[GREEN] = 0x0000;
+                    g_pui32Colors[BLUE] = 0x0000;
+                    RGBColorSet(g_pui32Colors);
+
                 }
                 // RIGHT_BUTTON é o SW2
                 else if((ui8CurButtonState & ALL_BUTTONS) == RIGHT_BUTTON)
                 {
-                    ui8Message = RIGHT_BUTTON;
 
-                    //
-                    // Guard UART from concurrent access.
-                    //
-                    //xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
-                    //UARTprintf("Right Button is pressed.\n");
-                    //xSemaphoreGive(g_pUARTSemaphore);
+                    xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
+                    UARTprintf("SW2 foi pressionado.\n");
+                    xSemaphoreGive(g_pUARTSemaphore);
 
-                    // Volta o scheduler
-                    xTaskResumeAll();
-                }
-
-                //
-                // Pass the value of the button pressed to LEDTask.
-                //
-                if(xQueueSend(g_pLEDQueue, &ui8Message, portMAX_DELAY) !=
-                   pdPASS)
-                {
-                    //
-                    // Error. The queue should never be full. If so print the
-                    // error message on UART and wait for ever.
-                    //
-                    UARTprintf("\nQueue full. This should never happen.\n");
-                    while(1)
-                    {
-                    }
+                    vTaskResume(SerialTask_handler);
+                    vTaskResume(GravaTask_handler);
+                    vTaskResume(TemperaturaTask_handler);
                 }
             }
         }
-
-        //
-        // Wait for the required amount of time to check back.
-        //
         vTaskDelayUntil(&ui16LastTime, ui32SwitchDelay / portTICK_RATE_MS);
     }
 }
@@ -159,20 +144,9 @@ SwitchTask(void *pvParameters)
 uint32_t
 SwitchTaskInit(void)
 {
-    //
-    // Unlock the GPIO LOCK register for Right button to work.
-    //
-    HWREG(GPIO_PORTF_BASE + GPIO_O_LOCK) = GPIO_LOCK_KEY;
-    HWREG(GPIO_PORTF_BASE + GPIO_O_CR) = 0xFF;
 
-    //
-    // Initialize the buttons
-    //
     ButtonsInit();
 
-    //
-    // Create the switch task.
-    //
     if(xTaskCreate(SwitchTask, (const portCHAR *)"Switch",
                    SWITCHTASKSTACKSIZE, NULL, tskIDLE_PRIORITY +
                    PRIORITY_SWITCH_TASK, NULL) != pdTRUE)
@@ -180,8 +154,5 @@ SwitchTaskInit(void)
         return(1);
     }
 
-    //
-    // Success.
-    //
     return(0);
 }

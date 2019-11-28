@@ -31,9 +31,13 @@
 #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
+#include "drivers/rgb.h"
 #include "utils/uartstdio.h"
 #include "led_task.h"
 #include "switch_task.h"
+#include "temperatura_task.h"
+#include "serial_task.h"
+#include "grava_task.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -83,6 +87,8 @@
 //
 //*****************************************************************************
 xSemaphoreHandle g_pUARTSemaphore;
+
+static uint32_t g_pui32Colors[3] = { 0x0000, 0x0000, 0x0000 };
 
 //*****************************************************************************
 //
@@ -151,6 +157,23 @@ ConfigureUART(void)
     UARTStdioConfig(0, 115200, 16000000);
 }
 
+void
+ConfigureRGB(void)
+{
+    static uint8_t g_ui8ColorsIndx;
+    //
+    // Initialize the GPIOs and Timers that drive the three LEDs.
+    //
+    RGBInit(1);
+    RGBIntensitySet(0.3f);
+
+    //
+    // Turn on the Green LED
+    //
+    g_ui8ColorsIndx = 0;
+    g_pui32Colors[g_ui8ColorsIndx] = 0x8000;
+    RGBColorSet(g_pui32Colors);
+}
 //*****************************************************************************
 //
 // Initialize FreeRTOS and start the initial set of tasks.
@@ -159,31 +182,18 @@ ConfigureUART(void)
 int
 main(void)
 {
-    //
-    // Set the clocking to run at 50 MHz from the PLL.
-    //
     ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
                        SYSCTL_OSC_MAIN);
 
-    //
-    // Initialize the UART and configure it for 115,200, 8-N-1 operation.
-    //
     ConfigureUART();
 
-    //
-    // Print demo introduction.
-    //
+    ConfigureRGB();
+
     UARTprintf("\n\nWelcome to the EK-TM4C123GXL FreeRTOS Demo!\n");
 
-    //
-    // Create a mutex to guard the UART.
-    //
     g_pUARTSemaphore = xSemaphoreCreateMutex();
 
-    //
-    // Create the LED task.
-    //
-    if(LEDTaskInit() != 0)
+    if(SwitchTaskInit() != 0)
     {
 
         while(1)
@@ -191,12 +201,22 @@ main(void)
         }
     }
 
-    //
-    // Create the switch task.
-    //
-    if(SwitchTaskInit() != 0)
+    if(SerialTaskInit() != 0)
     {
+        while(1)
+        {
+        }
+    }
 
+    if(GravaTaskInit() != 0)
+    {
+        while(1)
+        {
+        }
+    }
+
+    if(TemperaturaTaskInit() != 0)
+    {
         while(1)
         {
         }
