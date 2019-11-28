@@ -36,7 +36,9 @@
 #include "led_task.h"
 #include "priorities.h"
 #include "FreeRTOS.h"
+// necessário para vTaskSuspendAll e xTaskResumeAll
 #include "task.h"
+//
 #include "queue.h"
 #include "semphr.h"
 
@@ -93,6 +95,7 @@ SwitchTask(void *pvParameters)
             //
             if((ui8CurButtonState & ALL_BUTTONS) != 0)
             {
+                // LEFT_BUTTON é o SW1
                 if((ui8CurButtonState & ALL_BUTTONS) == LEFT_BUTTON)
                 {
                     ui8Message = LEFT_BUTTON;
@@ -100,10 +103,14 @@ SwitchTask(void *pvParameters)
                     //
                     // Guard UART from concurrent access.
                     //
-                    xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
-                    UARTprintf("Left Button is pressed.\n");
-                    xSemaphoreGive(g_pUARTSemaphore);
+                    //xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
+                    //UARTprintf("Left Button is pressed.\n");
+                    //xSemaphoreGive(g_pUARTSemaphore);
+
+                    // Suspende o scheduler sem desabilitar interrupções. Evita troca de contexto.
+                    vTaskSuspendAll();
                 }
+                // RIGHT_BUTTON é o SW2
                 else if((ui8CurButtonState & ALL_BUTTONS) == RIGHT_BUTTON)
                 {
                     ui8Message = RIGHT_BUTTON;
@@ -111,9 +118,12 @@ SwitchTask(void *pvParameters)
                     //
                     // Guard UART from concurrent access.
                     //
-                    xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
-                    UARTprintf("Right Button is pressed.\n");
-                    xSemaphoreGive(g_pUARTSemaphore);
+                    //xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
+                    //UARTprintf("Right Button is pressed.\n");
+                    //xSemaphoreGive(g_pUARTSemaphore);
+
+                    // Volta o scheduler
+                    xTaskResumeAll();
                 }
 
                 //
