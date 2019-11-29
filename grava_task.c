@@ -42,22 +42,23 @@ TaskHandle_t GravaTask_handler;
 
 extern xSemaphoreHandle g_pUARTSemaphore;
 
-static uint32_t g_pui32Colors[3];
+extern uint32_t g_pui32Colors[3];
 
 static void GravaTask(void *pvParameters)
 {
-//    uint32_t ui32GravaDelay = 200;
+    TickType_t xDelay = 100;
     uint32_t ui32Mensagem_Grava;
     uint8_t Grava_Buffer_Index = 0;
     uint32_t ui32Grava_Buffer[10];
-
-//    ui32arm_ult_tempo_grava = xTaskGetTickCount();
 
     SysCtlPeripheralEnable(SYSCTL_PERIPH_EEPROM0);
     EEPROMInit();
 
     while(1)
     {
+        g_pui32Colors[GREEN] = 0x8000;
+        RGBColorSet(g_pui32Colors);
+
         if(xQueueReceive(queue1, &ui32Mensagem_Grava, 0) == pdPASS)
         {
             ui32Grava_Buffer[Grava_Buffer_Index]=ui32Mensagem_Grava;
@@ -65,37 +66,36 @@ static void GravaTask(void *pvParameters)
 
             if(Grava_Buffer_Index==10)
             {
-                uint32_t pui32Read[10];
+                //                uint32_t pui32Read[10];
+                EEPROMMassErase();
+                EEPROMProgram(ui32Grava_Buffer, 0x0, sizeof(ui32Grava_Buffer));
+                //                EEPROMRead(pui32Read, 0x0, sizeof(pui32Read));
 
                 xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
                 UARTprintf("task GRAVA gravou dado \n");
                 xSemaphoreGive(g_pUARTSemaphore);
 
-                g_pui32Colors[GREEN] = 0x8000;
-                RGBColorSet(g_pui32Colors);
-                EEPROMMassErase();
-                EEPROMProgram(ui32Grava_Buffer, 0x0, sizeof(ui32Grava_Buffer));
-                EEPROMRead(pui32Read, 0x0, sizeof(pui32Read));
-
-//                xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
-//                UARTprintf("dado %d \n", pui32Read[0]);
-//                UARTprintf("dado %d \n", pui32Read[1]);
-//                UARTprintf("dado %d \n", pui32Read[2]);
-//                UARTprintf("dado %d \n", pui32Read[3]);
-//                UARTprintf("dado %d \n", pui32Read[4]);
-//                UARTprintf("dado %d \n", pui32Read[5]);
-//                UARTprintf("dado %d \n", pui32Read[6]);
-//                UARTprintf("dado %d \n", pui32Read[7]);
-//                UARTprintf("dado %d \n", pui32Read[8]);
-//                UARTprintf("dado %d \n", pui32Read[9]);
-//                xSemaphoreGive(g_pUARTSemaphore);
+                //                xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
+                //                UARTprintf("dado %d \n", pui32Read[0]);
+                //                UARTprintf("dado %d \n", pui32Read[1]);
+                //                UARTprintf("dado %d \n", pui32Read[2]);
+                //                UARTprintf("dado %d \n", pui32Read[3]);
+                //                UARTprintf("dado %d \n", pui32Read[4]);
+                //                UARTprintf("dado %d \n", pui32Read[5]);
+                //                UARTprintf("dado %d \n", pui32Read[6]);
+                //                UARTprintf("dado %d \n", pui32Read[7]);
+                //                UARTprintf("dado %d \n", pui32Read[8]);
+                //                UARTprintf("dado %d \n", pui32Read[9]);
+                //                xSemaphoreGive(g_pUARTSemaphore);
 
                 Grava_Buffer_Index=0;
             }
 
         }
-        //uint8_t ui8PinData=0;
-        //vTaskDelayUntil(&ui32arm_ult_tempo_grava, ui32GravaDelay / portTICK_RATE_MS);
+        vTaskDelay(xDelay);
+        g_pui32Colors[GREEN] = 0x0000;
+        RGBColorSet(g_pui32Colors);
+        vTaskDelay(xDelay);
     }
 }
 

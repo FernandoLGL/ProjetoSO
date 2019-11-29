@@ -40,20 +40,17 @@ extern xQueueHandle queue1; //Grava Task
 extern xQueueHandle queue2; // Serial Task
 extern xSemaphoreHandle g_pUARTSemaphore;
 
-static uint32_t g_pui32Colors[3];
+extern uint32_t g_pui32Colors[3];
 
 TaskHandle_t TemperaturaTask_handler;
 
 static void TemperaturaTask(void *pvParameters)
 {
 
-    uint32_t ui32TempDelay = 1000;
+    TickType_t xDelay = 500;
     uint32_t ui32ADC0Value[4];
     uint32_t ui32TempValueC;
     volatile uint32_t ui32TempAvg;
-    portTickType ui16arm_ult_tempo;
-
-    ui16arm_ult_tempo = xTaskGetTickCount();
 
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
     ROM_ADCHardwareOversampleConfigure(ADC0_BASE, 64);
@@ -102,7 +99,10 @@ static void TemperaturaTask(void *pvParameters)
             {
             }
         }
-        vTaskDelayUntil(&ui16arm_ult_tempo, ui32TempDelay / portTICK_RATE_MS);
+        vTaskDelay(xDelay);
+        g_pui32Colors[RED] = 0x0000;
+        RGBColorSet(g_pui32Colors);
+        vTaskDelay(xDelay);
     }
 }
 

@@ -37,31 +37,30 @@ extern xSemaphoreHandle g_pUARTSemaphore;
 
 xQueueHandle queue2;
 
-static uint32_t g_pui32Colors[3];
+extern uint32_t g_pui32Colors[3];
 
 TaskHandle_t SerialTask_handler;
 
 static void SerialTask(void *pvParameters)
 {
 
-    //portTickType ui32arm_ult_tempo_serial;
-    //uint32_t ui32Serial_Delay = 200;
+    TickType_t xDelay = 100;
     uint32_t ui32Serial_Msg;
     uint32_t index_serial_Buffer = 0;
     uint32_t ui32TempValue[10];
-    //ui32arm_ult_tempo_serial = xTaskGetTickCount();
 
     while(1)
     {
         if(xQueueReceive(queue2, &ui32Serial_Msg, 0) == pdPASS)
         {
+            g_pui32Colors[BLUE] = 0x8000;
+            RGBColorSet(g_pui32Colors);
+
             ui32TempValue[index_serial_Buffer]=ui32Serial_Msg;
             index_serial_Buffer++;
 
             if(index_serial_Buffer==10)
             {
-                g_pui32Colors[BLUE] = 0x8000;
-                RGBColorSet(g_pui32Colors);
 
                 xSemaphoreTake(g_pUARTSemaphore, portMAX_DELAY);
                 UARTprintf("Task SERIAL acordou:\n" );
@@ -77,7 +76,10 @@ static void SerialTask(void *pvParameters)
             }
 
         }
-        //vTaskDelayUntil(&ui32arm_ult_tempo_serial, ui32Serial_Delay / portTICK_RATE_MS);
+        vTaskDelay(xDelay);
+        g_pui32Colors[BLUE] = 0x0000;
+        RGBColorSet(g_pui32Colors);
+        vTaskDelay(xDelay);
     }
 
 }

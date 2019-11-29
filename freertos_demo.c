@@ -88,7 +88,7 @@
 //*****************************************************************************
 xSemaphoreHandle g_pUARTSemaphore;
 
-static uint32_t g_pui32Colors[3] = { 0x0000, 0x0000, 0x0000 };
+uint32_t g_pui32Colors[3] = { 0x0000, 0x0000, 0x0000 };
 
 //*****************************************************************************
 //
@@ -192,6 +192,7 @@ main(void)
     UARTprintf("\n\nWelcome to the EK-TM4C123GXL FreeRTOS Demo!\n");
 
     g_pUARTSemaphore = xSemaphoreCreateMutex();
+
 
     if(SwitchTaskInit() != 0)
     {
